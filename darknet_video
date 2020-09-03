@@ -1,0 +1,1 @@
+python3 darknet_video.py --data_file obj.data --config_file yolo-obj.cfg --weights yolo-obj_best.weights --input test2.mp4 --ext_output
