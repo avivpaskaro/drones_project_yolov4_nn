@@ -93,7 +93,7 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
         w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 #        print("h:{}, w:{}".format(h, w))
-        darknet.print_detections(detections, h/network_height, w/network_width, args.ext_output, f)
+        darknet.print_detections(detections, h/network_height, w/network_width, f, args.ext_output)
         f.write("\n\n")
     cap.release()
     f.close()

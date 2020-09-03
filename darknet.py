@@ -117,7 +117,7 @@ def load_network(config_file, data_file, weights, batch_size=1):
     return network, class_names, colors
 
 
-def print_detections(detections, height_ratio, width_ratio, coordinates=False, f):
+def print_detections(detections, height_ratio, width_ratio, f, coordinates=False):
     f.write("Objects:\n")
     for label, confidence, bbox in detections:
         x, y, w, h = bbox
