@@ -16,6 +16,8 @@ def parser():
                         help="video source. If empty, uses webcam 0 stream")
     parser.add_argument("--out_filename", type=str, default="",
                         help="inference video name. Not saved if empty")
+    parser.add_argument("--export_logname", type=str, default="",
+                        help="out log name. Not saved if empty")
     parser.add_argument("--weights", default="yolov4.weights",
                         help="yolo weights path")
     parser.add_argument("--dont_show", action='store_true',
@@ -79,8 +81,9 @@ def video_capture(frame_queue, darknet_image_queue, darknet_image_time_queue):
     cap.release()
 
 
-def inference(darknet_image_queue, darknet_image_time_queue, network_width, network_height, detections_queue, fps_queue):
-    f = open("darknet_output.txt", "a")
+def inference(darknet_image_queue, darknet_image_time_queue, network_width, network_height, detections_queue, fps_queue, export=False):
+    if export:
+        f = open(export, "a")
     while cap.isOpened():
         darknet_image = darknet_image_queue.get()
         prev_time = time.time()
@@ -89,14 +92,15 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
 #        fps = float(1/(time.time() - prev_time))
 #        fps_queue.put(int(fps))
 #        print("FPS: {}".format(fps))
-        f.write("time: {}\n".format(darknet_image_time_queue.get()))
-        w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-#        print("h:{}, w:{}".format(h, w))
-        darknet.print_detections(detections, h/network_height, w/network_width, f, args.ext_output)
-        f.write("\n\n")
+        if export:
+            f.write("time: {}\n".format(darknet_image_time_queue.get()))
+            w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            darknet.print_detections(detections, h/network_height, w/network_width, f, args.ext_output)
+            f.write("\n\n")
     cap.release()
-    f.close()
+    if export:
+        f.close()
 
 
 def drawing(frame_queue, detections_queue, fps_queue):
@@ -143,5 +147,5 @@ if __name__ == '__main__':
     input_path = str2int(args.input)
     cap = cv2.VideoCapture(input_path)
     Thread(target=video_capture, args=(frame_queue, darknet_image_queue, darknet_image_time_queue)).start()
-    Thread(target=inference, args=(darknet_image_queue, darknet_image_time_queue, width, height, detections_queue, fps_queue)).start()
+    Thread(target=inference, args=(darknet_image_queue, darknet_image_time_queue, width, height, detections_queue, fps_queue, args.export_logname)).start()
     Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
