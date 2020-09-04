@@ -19,7 +19,7 @@ def parser():
     parser.add_argument("--weights", default="yolov4.weights",
                         help="yolo weights path")
     parser.add_argument("--dont_show", action='store_true',
-                        help="windown inference display. For headless systems")
+                        help="window inference display. For headless systems")
     parser.add_argument("--ext_output", action='store_true',
                         help="display bbox coordinates of detected objects")
     parser.add_argument("--config_file", default="./cfg/yolov4.cfg",
