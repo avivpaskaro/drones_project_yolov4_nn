@@ -22,8 +22,8 @@ def parser():
                         help="yolo weights path")
     parser.add_argument("--dont_show", action='store_true',
                         help="window inference display. For headless systems")
-    parser.add_argument("--ext_output", action='store_true',
-                        help="display bbox coordinates of detected objects")
+#    parser.add_argument("--ext_output", action='store_true',
+#                        help="display bbox coordinates of detected objects")
     parser.add_argument("--config_file", default="./cfg/yolov4.cfg",
                         help="path to config file")
     parser.add_argument("--data_file", default="./cfg/coco.data",
@@ -54,6 +54,8 @@ def check_arguments_errors(args):
         raise(ValueError("Invalid data file path {}".format(os.path.abspath(args.data_file))))
     if str2int(args.input) == str and not os.path.exists(args.input):
         raise(ValueError("Invalid video path {}".format(os.path.abspath(args.input))))
+    if not args.export_logname:
+        raise(ValueError("need to set log name path"))
 
 
 def set_saved_video(input_video, output_video, size):
@@ -81,10 +83,10 @@ def video_capture(frame_queue, darknet_image_queue, darknet_image_time_queue):
     cap.release()
 
 
-def inference(darknet_image_queue, darknet_image_time_queue, network_width, network_height, detections_queue, fps_queue, export=False):
-    if export:
-        f = open(export, "a")
+def inference(darknet_image_queue, darknet_image_time_queue, network_width, network_height, detections_queue, fps_queue, exportlog_name):
+    f = open(exportlog_name, "a")
     while cap.isOpened():
+#       print("frame")
         darknet_image = darknet_image_queue.get()
         prev_time = time.time()
         detections = darknet.detect_image(network, class_names, darknet_image, thresh=args.thresh)
@@ -92,15 +94,13 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
 #        fps = float(1/(time.time() - prev_time))
 #        fps_queue.put(int(fps))
 #        print("FPS: {}".format(fps))
-        if export:
-            f.write("time: {}\n".format(darknet_image_time_queue.get()))
-            w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-            h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            darknet.print_detections(detections, h/network_height, w/network_width, f, args.ext_output)
-            f.write("\n\n")
+        f.write("time: {}\n".format(darknet_image_time_queue.get()))
+        w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        darknet.print_detections(detections, h/network_height, w/network_width, f)
+        f.write("\n\n")
     cap.release()
-    if export:
-        f.close()
+    f.close()
 
 
 def drawing(frame_queue, detections_queue, fps_queue):

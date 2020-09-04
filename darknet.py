@@ -117,16 +117,13 @@ def load_network(config_file, data_file, weights, batch_size=1):
     return network, class_names, colors
 
 
-def print_detections(detections, height_ratio, width_ratio, f, coordinates=False):
+def print_detections(detections, height_ratio, width_ratio, f):
     f.write("Objects:\n")
     for label, confidence, bbox in detections:
         x, y, w, h = bbox
-        if coordinates:
 #            print("width_ratio: {}, height_ratio: {}".format(width_ratio, height_ratio))
-            f.write("{}: {}%    (left_x: {:.0f}   top_y:  {:.0f}   width:   {:.0f}   height:  {:.0f})\n" \
-                  .format(label, confidence, width_ratio*x, height_ratio*y, width_ratio*w, height_ratio*h))
-        else:
-            f.write("{}: {}%\n".format(label, confidence))
+        f.write("{}: {}%    (left_x: {:.0f}   top_y:  {:.0f}   width:   {:.0f}   height:  {:.0f})\n" \
+                .format(label, confidence, width_ratio*x, height_ratio*y, width_ratio*w, height_ratio*h))
 
 
 def draw_boxes(detections, image, colors):
