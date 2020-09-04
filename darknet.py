@@ -122,7 +122,7 @@ def print_detections(detections, height_ratio, width_ratio, f):
     for label, confidence, bbox in detections:
         x, y, w, h = bbox
 #            print("width_ratio: {}, height_ratio: {}".format(width_ratio, height_ratio))
-        f.write("{}: {}%    (left_x: {:.0f}   top_y:  {:.0f}   width:   {:.0f}   height:  {:.0f})\n" \
+        f.write("{}: {}%  left_x: {:.0f}   top_y:  {:.0f}   width:   {:.0f}   height:  {:.0f}\n" \
                 .format(label, confidence, width_ratio*x, height_ratio*y, width_ratio*w, height_ratio*h))
 
 
