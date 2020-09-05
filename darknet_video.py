@@ -55,7 +55,9 @@ def check_arguments_errors(args):
     if str2int(args.input) == str and not os.path.exists(args.input):
         raise(ValueError("\nInvalid video path {}".format(os.path.abspath(args.input))))
     if not args.export_logname:
-        raise(ValueError("\nNeed to set results log-name!"))
+        raise(ValueError("\nNeed to set results log-name"))
+    if args.out_filename and not args.out_filename.endswith('.mp4'):
+        raise(ValueError("\nOut file name need to end with '.mp4'"))
 
 
 def set_saved_video(input_video, output_video, size):
@@ -101,6 +103,8 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
     cap.release()
     f.close()
     print("\nFinished successfully, results: {}".format(args.export_logname))
+    if args.out_filename: 
+        print("Out file: {}".format(args.out_filename))
 
 
 def drawing(frame_queue, detections_queue, fps_queue):
