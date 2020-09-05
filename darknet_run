@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 darknet_video.py --data_file obj.data --config_file yolo-obj.cfg --weights yolo-obj_best.weights --thresh 0.25 --dont_show --input 0  --export_logname exportlog.txt --out_filename out.mp4
+python3 darknet_video.py --data_file obj.data --config_file yolo-obj.cfg --weights yolo-obj_best.weights --thresh 0.25 --dont_show --input 0 --export_logname results.txt 

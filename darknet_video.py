@@ -47,15 +47,15 @@ def str2int(video_path):
 def check_arguments_errors(args):
     assert 0 < args.thresh < 1, "Threshold should be a float between zero and one (non-inclusive)"
     if not os.path.exists(args.config_file):
-        raise(ValueError("Invalid config path {}".format(os.path.abspath(args.config_file))))
+        raise(ValueError("\nInvalid config path {}".format(os.path.abspath(args.config_file))))
     if not os.path.exists(args.weights):
-        raise(ValueError("Invalid weight path {}".format(os.path.abspath(args.weights))))
+        raise(ValueError("\nInvalid weight path {}".format(os.path.abspath(args.weights))))
     if not os.path.exists(args.data_file):
-        raise(ValueError("Invalid data file path {}".format(os.path.abspath(args.data_file))))
+        raise(ValueError("\nInvalid data file path {}".format(os.path.abspath(args.data_file))))
     if str2int(args.input) == str and not os.path.exists(args.input):
-        raise(ValueError("Invalid video path {}".format(os.path.abspath(args.input))))
+        raise(ValueError("\nInvalid video path {}".format(os.path.abspath(args.input))))
     if not args.export_logname:
-        raise(ValueError("need to set log name path"))
+        raise(ValueError("\nNeed to set results log-name!"))
 
 
 def set_saved_video(input_video, output_video, size):
@@ -92,7 +92,7 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
         detections_queue.put(detections)
         fps = float(1/(time.time() - prev_time))
         fps_queue.put(int(fps))
-        print("FPS: {}".format(fps))
+        print("FPS: {:.2f}".format(fps))
         f.write("time: {}\n".format(darknet_image_time_queue.get()))
         w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
         h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -100,7 +100,7 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
         f.write("\n\n")
     cap.release()
     f.close()
-    print("finished successfully")
+    print("\nFinished successfully, results: {}".format(args.export_logname))
 
 
 def drawing(frame_queue, detections_queue, fps_queue):
