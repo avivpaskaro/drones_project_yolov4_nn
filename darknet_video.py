@@ -10,19 +10,25 @@ from queue import Queue
 from datetime import datetime
 import signal
 import sys
-
-"""
-Close video (so the video and the results.txt will be saved) when given CTAL+C. Relevant mainly for webcam scenario (infinite loop).
-"""
 def signal_handler(sig, frame):
-	print("You pressed CTAL+C!")
-	cap.release()
-	time.sleep(3)
-	sys.exit(0)
-signal.signal(signal.SIGINT, signal_handler)
+    """
+    Close video (so the video and the results.txt will be saved) when given CTAL+C.
+    Relevant mainly for webcam scenario (infinite loop).
+    """
+    print("You pressed CTAL+C!, exiting while save log & output video (if there is) properly")
+    cap.release()
+    video.release()
+    cv2.destroyAllWindows()
+    time.sleep(5)
+    sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)  # CTRL+C
+signal.signal(signal.SIGTERM, signal_handler)  # stop on debugger
 
 
 def parser():
+    """
+    Arguments parser.
+    """
     parser = argparse.ArgumentParser(description="YOLO Object Detection")
     parser.add_argument("--input", type=str, default=0,
                         help="video source. If empty, uses webcam 0 stream")
@@ -48,7 +54,7 @@ def parser():
 def str2int(video_path):
     """
     argparse returns and string althout webcam uses int (0, 1 ...)
-    Cast to int if needed
+    Cast to int if needed.
     """
     try:
         return int(video_path)
@@ -57,6 +63,9 @@ def str2int(video_path):
 
 
 def check_arguments_errors(args):
+    """
+    Arguments checker, returns error for false arguments.
+    """
     assert 0 < args.thresh < 1, "Threshold should be a float between zero and one (non-inclusive)"
     if not os.path.exists(args.config_file):
         raise(ValueError("\nInvalid config path {}".format(os.path.abspath(args.config_file))))
@@ -73,6 +82,9 @@ def check_arguments_errors(args):
 
 
 def set_saved_video(input_video, output_video, size):
+    """
+    creating the result video file.
+    """
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     fps = int(input_video.get(cv2.CAP_PROP_FPS))
     video = cv2.VideoWriter(output_video, fourcc, fps, size)
@@ -80,32 +92,45 @@ def set_saved_video(input_video, output_video, size):
 
 
 def video_capture(frame_queue, darknet_image_queue, darknet_image_time_queue):
-    num = 0
+    """
+    reading frames from the caputre (webcam\video) and the time of caputre,
+    and push them into queues for farther use.
+    the function uses N variable for sampling each of the N'th frame.
+    """
+    N = 0
     while cap.isOpened():
         ret, frame = cap.read()
         t = datetime.now()
         if not ret:
             break
-        if not (num % 6):
+        if not (N % 6):
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (width, height), interpolation=cv2.INTER_LINEAR)
             frame_queue.put(frame_resized)
             darknet.copy_image_from_bytes(darknet_image, frame_resized.tobytes())
             darknet_image_queue.put(darknet_image)
             darknet_image_time_queue.put(t)
-        num += 1
+        N += 1
     cap.release()
 
 
 def inference(darknet_image_queue, darknet_image_time_queue, network_width, network_height, detections_queue, fps_queue):
+    """
+    inference the captures into the darknet.
+    function is also in charge of the printing/writing (fps, caputre time, detections).
+    """
+    logname = args.export_logname
+    f = open(logname, "w")
+    """ OPTION: each time will open a new txt file
     logname_split = args.export_logname.rsplit(".", 1)
     index = 0
     while 1:
-        logname = logname_split[0] + '_' + str(index) + '.' + logname_split[1]
+        logname = logname_split[0] + '_' + str(index) + '.' + logname_split[1] # name_<index>.txt
         if not os.path.isfile(logname):
             break
         index += 1
     f = open(logname, "w")
+    """
     while cap.isOpened():
         darknet_image = darknet_image_queue.get()
         prev_time = time.time()
@@ -125,12 +150,17 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
 
 
 def drawing(frame_queue, detections_queue, fps_queue):
+    """
+    drawing bbox on the capture and writing image.
+    """
+    global video  # so we could release it if a signal is given
     random.seed(3)  # deterministic bbox colors
-    if args.out_filename:
+    filename = args.out_filename
+    if args.out_filename: # each time will open a new out file
         filename_split = args.out_filename.rsplit(".", 1)
         index = 0
         while 1:
-            filename = filename_split[0] + '_' + str(index) + '.' + filename_split[1]
+            filename = filename_split[0] + '_' + str(index) + '.' + filename_split[1] # save file: name_<index>.mp4
             if not os.path.isfile(filename):
                 break
             index += 1
@@ -148,6 +178,7 @@ def drawing(frame_queue, detections_queue, fps_queue):
                 cv2.imshow('Inference', image)
             if cv2.waitKey(fps) == 27:
                 break
+
     cap.release()
     video.release()
     cv2.destroyAllWindows()
@@ -156,27 +187,27 @@ def drawing(frame_queue, detections_queue, fps_queue):
 
 
 if __name__ == '__main__':
-	frame_queue = Queue()
-	darknet_image_queue = Queue(maxsize=1)
-	darknet_image_time_queue = Queue(maxsize=1)
-	detections_queue = Queue(maxsize=1)
-	fps_queue = Queue(maxsize=1)
+    frame_queue = Queue()
+    darknet_image_queue = Queue(maxsize=1)
+    darknet_image_time_queue = Queue(maxsize=1)
+    detections_queue = Queue(maxsize=1)
+    fps_queue = Queue(maxsize=1)
 
-	args = parser()
-	check_arguments_errors(args)
-	network, class_names, class_colors = darknet.load_network(
-	    args.config_file,
-	    args.data_file,
-	    args.weights,
-	    batch_size=1
-	)
-	# Darknet doesn't accept numpy images.
-	# Create one with image we reuse for each detect
-	width = darknet.network_width(network)
-	height = darknet.network_height(network)
-	darknet_image = darknet.make_image(width, height, 3)
-	input_path = str2int(args.input)
-	cap = cv2.VideoCapture(input_path)
-	Thread(target=video_capture, args=(frame_queue, darknet_image_queue, darknet_image_time_queue)).start()
-	Thread(target=inference, args=(darknet_image_queue, darknet_image_time_queue, width, height, detections_queue, fps_queue)).start()
-	Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
+    args = parser()
+    check_arguments_errors(args)
+    network, class_names, class_colors = darknet.load_network(
+        args.config_file,
+        args.data_file,
+        args.weights,
+        batch_size=1
+    )
+    # Darknet doesn't accept numpy images.
+    # Create one with image we reuse for each detect
+    width = darknet.network_width(network)
+    height = darknet.network_height(network)
+    darknet_image = darknet.make_image(width, height, 3)
+    input_path = str2int(args.input)
+    cap = cv2.VideoCapture(input_path)
+    Thread(target=video_capture, args=(frame_queue, darknet_image_queue, darknet_image_time_queue)).start()
+    Thread(target=inference, args=(darknet_image_queue, darknet_image_time_queue, width, height, detections_queue, fps_queue)).start()
+    Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
