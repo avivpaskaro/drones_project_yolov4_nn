@@ -101,7 +101,7 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
     logname_split = args.export_logname.rsplit(".", 1)
     index = 0
     while 1:
-        logname = logname.split(0) + '_' + index + logname.split(1)
+        logname = logname_split[0] + '_' + str(index) + '.' + logname_split[1]
         if not os.path.isfile(logname):
             break
         index += 1
@@ -130,7 +130,7 @@ def drawing(frame_queue, detections_queue, fps_queue):
         filename_split = args.out_filename.rsplit(".", 1)
         index = 0
         while 1:
-            filename = filename_split(0) + '_' + index + filename_split(1)
+            filename = filename_split[0] + '_' + str(index) + '.' + filename_split[1]
             if not os.path.isfile(filename):
                 break
             index += 1
@@ -152,7 +152,7 @@ def drawing(frame_queue, detections_queue, fps_queue):
     video.release()
     cv2.destroyAllWindows()
     if args.out_filename:
-        print("Out file: {}".format(filename))
+        print("\nOut file: {}".format(filename))
 
 
 if __name__ == '__main__':
