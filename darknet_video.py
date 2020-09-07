@@ -8,6 +8,18 @@ import argparse
 from threading import Thread, enumerate
 from queue import Queue
 from datetime import datetime
+import signal
+import sys
+
+"""
+Close video (so the video and the results.txt will be saved) when given CTAL+C. Relevant mainly for webcam scenario (infinite loop).
+"""
+def signal_handler(sig, frame):
+	print("You pressed CTAL+C!")
+	cap.release()
+	time.sleep(3)
+	sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)
 
 
 def parser():
@@ -86,7 +98,14 @@ def video_capture(frame_queue, darknet_image_queue, darknet_image_time_queue):
 
 
 def inference(darknet_image_queue, darknet_image_time_queue, network_width, network_height, detections_queue, fps_queue):
-    f = open(args.export_logname, "a")
+    logname_split = args.export_logname.rsplit(".", 1)
+    index = 0
+    while 1:
+        logname = logname.split(0) + '_' + index + logname.split(1)
+        if not os.path.isfile(logname):
+            break
+        index += 1
+    f = open(logname, "w")
     while cap.isOpened():
         darknet_image = darknet_image_queue.get()
         prev_time = time.time()
@@ -102,14 +121,20 @@ def inference(darknet_image_queue, darknet_image_time_queue, network_width, netw
         f.write("\n\n")
     cap.release()
     f.close()
-    print("\nFinished successfully, results: {}".format(args.export_logname))
-    if args.out_filename: 
-        print("Out file: {}".format(args.out_filename))
+    print("\nFinished successfully, results: {}".format(logname))
 
 
 def drawing(frame_queue, detections_queue, fps_queue):
     random.seed(3)  # deterministic bbox colors
-    video = set_saved_video(cap, args.out_filename, (width, height))
+    if args.out_filename:
+        filename_split = args.out_filename.rsplit(".", 1)
+        index = 0
+        while 1:
+            filename = filename_split(0) + '_' + index + filename_split(1)
+            if not os.path.isfile(filename):
+                break
+            index += 1
+    video = set_saved_video(cap, filename, (width, height))
     while cap.isOpened():
         frame_resized = frame_queue.get()
         detections = detections_queue.get()
@@ -126,30 +151,32 @@ def drawing(frame_queue, detections_queue, fps_queue):
     cap.release()
     video.release()
     cv2.destroyAllWindows()
+    if args.out_filename:
+        print("Out file: {}".format(filename))
 
 
 if __name__ == '__main__':
-    frame_queue = Queue()
-    darknet_image_queue = Queue(maxsize=1)
-    darknet_image_time_queue = Queue(maxsize=1)
-    detections_queue = Queue(maxsize=1)
-    fps_queue = Queue(maxsize=1)
+	frame_queue = Queue()
+	darknet_image_queue = Queue(maxsize=1)
+	darknet_image_time_queue = Queue(maxsize=1)
+	detections_queue = Queue(maxsize=1)
+	fps_queue = Queue(maxsize=1)
 
-    args = parser()
-    check_arguments_errors(args)
-    network, class_names, class_colors = darknet.load_network(
-            args.config_file,
-            args.data_file,
-            args.weights,
-            batch_size=1
-        )
-    # Darknet doesn't accept numpy images.
-    # Create one with image we reuse for each detect
-    width = darknet.network_width(network)
-    height = darknet.network_height(network)
-    darknet_image = darknet.make_image(width, height, 3)
-    input_path = str2int(args.input)
-    cap = cv2.VideoCapture(input_path)
-    Thread(target=video_capture, args=(frame_queue, darknet_image_queue, darknet_image_time_queue)).start()
-    Thread(target=inference, args=(darknet_image_queue, darknet_image_time_queue, width, height, detections_queue, fps_queue)).start()
-    Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
+	args = parser()
+	check_arguments_errors(args)
+	network, class_names, class_colors = darknet.load_network(
+	    args.config_file,
+	    args.data_file,
+	    args.weights,
+	    batch_size=1
+	)
+	# Darknet doesn't accept numpy images.
+	# Create one with image we reuse for each detect
+	width = darknet.network_width(network)
+	height = darknet.network_height(network)
+	darknet_image = darknet.make_image(width, height, 3)
+	input_path = str2int(args.input)
+	cap = cv2.VideoCapture(input_path)
+	Thread(target=video_capture, args=(frame_queue, darknet_image_queue, darknet_image_time_queue)).start()
+	Thread(target=inference, args=(darknet_image_queue, darknet_image_time_queue, width, height, detections_queue, fps_queue)).start()
+	Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
