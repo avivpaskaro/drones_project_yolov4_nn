@@ -103,24 +103,20 @@ def video_capture(frame_queue, darknet_image_queue):
     """
     reading frames from the caputre (webcam\video) and the time of caputre,
     and push them into queues for farther use.
-    the function uses N variable for sampling each of the N'th frame.
     """
-    N = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
-        if not (N % 6): # take one of 6 frames from camera\video
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame_resized = cv2.resize(frame_rgb, (width, height), interpolation=cv2.INTER_LINEAR)
-            frame_queue.put(frame_resized)
-            darknet.copy_image_from_bytes(darknet_image, frame_resized.tobytes())
-            darknet_image_queue.put(darknet_image)
-        N += 1
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_resized = cv2.resize(frame_rgb, (width, height), interpolation=cv2.INTER_LINEAR)
+        frame_queue.put(frame_resized)
+        darknet.copy_image_from_bytes(darknet_image, frame_resized.tobytes())
+        darknet_image_queue.put(darknet_image)
     cap.release()
 
 
-def inference(darknet_image_queue, network_width, network_height, detections_queue, fps_queue):
+def inference(darknet_image_queue, detections_queue, fps_queue):
     """
     inference the captures into the darknet.
     function is also in charge of the printing/writing (fps, caputre time, detections).
@@ -146,8 +142,7 @@ def inference(darknet_image_queue, network_width, network_height, detections_que
         fps_queue.put(int(fps)) # store fps in queue
         print("FPS: {:.2f}".format(fps)) # printing fps to outstream just to follow up
         f.write("time: {}\n".format(prev_time)) # store image entering time in file
-        darknet.print_detections(detections, cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/network_height,\
-                                 cap.get(cv2.CAP_PROP_FRAME_WIDTH)/network_width, f) # store image bbox in file
+        darknet.print_detections(detections, cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/height, cap.get(cv2.CAP_PROP_FRAME_WIDTH)/width, f) # store image bbox in file
         f.write("\n\n")
     cap.release()
     f.close()
@@ -161,10 +156,7 @@ def drawing(frame_queue, detections_queue, fps_queue):
     global video  # so we could release it if a signal is given
     random.seed(3)  # deterministic bbox colors
     filename = args.out_filename # results video file
-    """
-    each time will open a new out file
-    """
-    if args.out_filename:
+    if args.out_filename: # each time will open a new out file
         filename_split = args.out_filename.rsplit(".", 1)
         index = 0
         while 1:
@@ -186,7 +178,6 @@ def drawing(frame_queue, detections_queue, fps_queue):
                 cv2.imshow('Inference', image)
             if cv2.waitKey(fps) == 27:
                 break
-
     cap.release()
     video.release()
     cv2.destroyAllWindows()
@@ -216,5 +207,5 @@ if __name__ == '__main__':
     input_path = str2int(args.input)
     cap = cv2.VideoCapture(input_path)
     Thread(target=video_capture, args=(frame_queue, darknet_image_queue)).start()
-    Thread(target=inference, args=(darknet_image_queue, width, height, detections_queue, fps_queue)).start()
+    Thread(target=inference, args=(darknet_image_queue, detections_queue, fps_queue)).start()
     Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
