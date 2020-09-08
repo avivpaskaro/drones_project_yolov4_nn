@@ -111,6 +111,8 @@ def video_capture(frame_queue, darknet_image_queue):
         ret, frame = cap.read()
         if not ret:
             break
+        # capture_time  
+        capture_time_queue.set(time.time())
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame_resized = cv2.resize(frame_rgb, (width, height), interpolation=cv2.INTER_LINEAR)
         frame_queue.put(frame_resized)
@@ -155,10 +157,12 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
         fps_queue.put(int(fps))
          # printing fps to outstream (just to follow up)
         print("FPS: {:.2f}".format(fps))
-         # store entering time to file
-        f.write("time: {}\n".format(prev_time))
+         # store capture time to file
+        f.write("time: {}\n".format(capture_time_queue.get())
          # store bbox to file
-        darknet.print_detections(detections, cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/height, cap.get(cv2.CAP_PROP_FRAME_WIDTH)/width, f)
+        height_ratio = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/height
+        width_ratio = cap.get(cv2.CAP_PROP_FRAME_WIDTH)/width
+        darknet.print_detections(detections, height_ratio, width_ratio, f)
         f.write("\n")
     cap.release()
     f.close()
@@ -203,7 +207,7 @@ def drawing(frame_queue, detections_queue, fps_queue):
             # show video image
             if not args.dont_show:
                 cv2.imshow('Inference', image)
-            # Esc key to stop
+            # Esc key to stop GUI
             if cv2.waitKey(fps) == 27:
                 break
     # Closes video file or capturing device
@@ -221,6 +225,7 @@ if __name__ == '__main__':
     darknet_image_queue = Queue(maxsize=1)
     detections_queue = Queue(maxsize=1)
     fps_queue = Queue(maxsize=1)
+    capture_time_queue = Queue(maxsize=1)
 
     args = parser()
     check_arguments_errors(args)
