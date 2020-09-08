@@ -156,7 +156,7 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
         darknet_image = darknet_image_queue.get()
         # sample entering time
         prev_time = time.time()
-        enter_time_queue.pop()
+        enter_time_queue.pop(0)
         enter_time_queue.append(prev_time)
         # detect image (inference image in neural network)
         detections = darknet.detect_image(
@@ -165,7 +165,7 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
         detections_queue.put(detections)
         # calculate fps of passing image
         fps = float(1 / (time.time() - prev_time))
-        exit_time_queue.pop()
+        exit_time_queue.pop(0)
         exit_time_queue.append(time.time())
         # store fps in queue
         fps_queue.put(int(fps))
@@ -188,7 +188,7 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
 
 def drawing(frame_queue, detections_queue, fps_queue):
     """
-    drawing bbox on the image and writing results video file \ show video image.
+    drawing bbox on the image and writing results video file or show video image.
     """
     # so we could release it if a signal is given
     global video
