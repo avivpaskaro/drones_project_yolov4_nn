@@ -10,6 +10,7 @@ from queue import Queue
 from datetime import datetime
 import signal
 import sys
+from statistics import mean
 
 
 def signal_handler(sig, frame):
@@ -24,10 +25,11 @@ def signal_handler(sig, frame):
     time.sleep(5)
     sys.exit(0)
 
+
  # CTRL+C
-signal.signal(signal.SIGINT, signal_handler) 
- # stop on debugger
-signal.signal(signal.SIGTERM, signal_handler) 
+signal.signal(signal.SIGINT, signal_handler)
+# stop on debugger
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def parser():
@@ -79,13 +81,17 @@ def check_arguments_errors(args):
     """
     assert 0 < args.thresh < 1, "Threshold should be a float between zero and one (non-inclusive)"
     if not os.path.exists(args.config_file):
-        raise(ValueError("\nInvalid config path {}".format(os.path.abspath(args.config_file))))
+        raise(ValueError("\nInvalid config path {}".format(
+            os.path.abspath(args.config_file))))
     if not os.path.exists(args.weights):
-        raise(ValueError("\nInvalid weight path {}".format(os.path.abspath(args.weights))))
+        raise(ValueError("\nInvalid weight path {}".format(
+            os.path.abspath(args.weights))))
     if not os.path.exists(args.data_file):
-        raise(ValueError("\nInvalid data file path {}".format(os.path.abspath(args.data_file))))
+        raise(ValueError("\nInvalid data file path {}".format(
+            os.path.abspath(args.data_file))))
     if str2int(args.input) == str and not os.path.exists(args.input):
-        raise(ValueError("\nInvalid video path {}".format(os.path.abspath(args.input))))
+        raise(ValueError("\nInvalid video path {}".format(
+            os.path.abspath(args.input))))
     if not args.export_logname:
         raise(ValueError("\nNeed to set results log-name"))
     if args.out_filename and not args.out_filename.endswith('.mp4'):
@@ -111,10 +117,11 @@ def video_capture(frame_queue, darknet_image_queue):
         ret, frame = cap.read()
         if not ret:
             break
-        # capture_time  
+        # capture_time
         capture_time_queue.put(time.time())
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_resized = cv2.resize(frame_rgb, (width, height), interpolation=cv2.INTER_LINEAR)
+        frame_resized = cv2.resize(
+            frame_rgb, (width, height), interpolation=cv2.INTER_LINEAR)
         frame_queue.put(frame_resized)
         darknet.copy_image_from_bytes(darknet_image, frame_resized.tobytes())
         darknet_image_queue.put(darknet_image)
@@ -126,7 +133,7 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
     inference the captures into the darknet.
     function is also in charge of the printing/writing (fps, caputre time, detections).
     """
-    logname = args.export_logname # results log
+    logname = args.export_logname  # results log
     f = open(logname, "w")
     """ OPTION:
     # each time will open a new txt file
@@ -142,30 +149,34 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
         index += 1
     f = open(logname, "w")
     """
-    fps_avg_counter = 0
-    fps_time = time.time()
+    enter_time_queue = [0, 0, 0]
+    exit_time_queue = [0, 0, 0]
     while cap.isOpened():
         # get new image from queue
         darknet_image = darknet_image_queue.get()
         # sample entering time
-        prev_time = time.time() 
-         # detect image (inference image in neural network)
-        detections = darknet.detect_image(network, class_names, darknet_image, thresh=args.thresh)
-         # store result in queue
+        prev_time = time.time()
+        enter_time_queue.pop()
+        enter_time_queue.append(prev_time)
+        # detect image (inference image in neural network)
+        detections = darknet.detect_image(
+            network, class_names, darknet_image, thresh=args.thresh)
+        # store result in queue
         detections_queue.put(detections)
         # calculate fps of passing image
-        fps = float(1/(time.time() - prev_time)) 
-         # store fps in queue
+        fps = float(1 / (time.time() - prev_time))
+        exit_time_queue.pop()
+        exit_time_queue.append(time.time())
+        # store fps in queue
         fps_queue.put(int(fps))
-         # printing fps to outstream (just to follow up)
-        fps_avg_counter = fps_avg_counter + 1
-        if (time.time() - fps_time) > 3:  # 3 seconds
-            print("Average FPS over last 3 seconds is: {:.2f}".format(fps_avg_counter / 3.))
-            fps_time = time.time()
-            fps_avg_counter = 0
-         # store capture time to file
+        # calculate the average fps of 3 last frame (just to follow up)
+        fps_list = [1./(m - n)
+                    for m, n in zip(exit_time_queue, enter_time_queue)]
+        print("Average FPS over last 3 frames is: {:.2f}".format(
+            mean(fps_list)))
+        # store capture time to file
         f.write("time: {}\n".format(capture_time_queue.get()))
-         # store bbox to file
+        # store bbox to file
         height_ratio = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/height
         width_ratio = cap.get(cv2.CAP_PROP_FRAME_WIDTH)/width
         darknet.print_detections(detections, height_ratio, width_ratio, f)
@@ -180,25 +191,26 @@ def drawing(frame_queue, detections_queue, fps_queue):
     drawing bbox on the image and writing results video file \ show video image.
     """
     # so we could release it if a signal is given
-    global video 
+    global video
     # deterministic bbox colors
-    random.seed(3) 
+    random.seed(3)
     # results video file
     filename = args.out_filename
     # each time will open a new out file
-    if args.out_filename: 
+    if args.out_filename:
         filename_split = args.out_filename.rsplit(".", 1)
         index = 0
         while 1:
-             # save file: name_<index>.mp4
-            filename = filename_split[0] + '_' + str(index) + '.' + filename_split[1]
+            # save file: name_<index>.mp4
+            filename = filename_split[0] + '_' + \
+                str(index) + '.' + filename_split[1]
             # file not exists
             if not os.path.isfile(filename):
                 break
             # trying next index
             index += 1
     # result video obj
-    video = set_saved_video(cap, filename, (width, height))  
+    video = set_saved_video(cap, filename, (width, height))
     while cap.isOpened():
         frame_resized = frame_queue.get()
         detections = detections_queue.get()
@@ -208,7 +220,7 @@ def drawing(frame_queue, detections_queue, fps_queue):
             image = darknet.draw_boxes(detections, frame_resized, class_colors)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             # writing video image
-            if args.out_filename is not None: 
+            if args.out_filename is not None:
                 video.write(image)
             # show video image
             if not args.dont_show:
@@ -250,6 +262,9 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(input_path)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    Thread(target=video_capture, args=(frame_queue, darknet_image_queue)).start()
-    Thread(target=inference, args=(darknet_image_queue, detections_queue, fps_queue)).start()
-    Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
+    Thread(target=video_capture, args=(
+        frame_queue, darknet_image_queue)).start()
+    Thread(target=inference, args=(darknet_image_queue,
+                                   detections_queue, fps_queue)).start()
+    Thread(target=drawing, args=(frame_queue,
+                                 detections_queue, fps_queue)).start()
