@@ -25,6 +25,7 @@ def signal_handler(sig, frame):
     time.sleep(5)
     sys.exit(0)
 
+
  # CTRL+C
 signal.signal(signal.SIGINT, signal_handler)
 # stop on debugger
@@ -247,11 +248,7 @@ if __name__ == '__main__':
     args = parser()
     check_arguments_errors(args)
     network, class_names, class_colors = darknet.load_network(
-        args.config_file,
-        args.data_file,
-        args.weights,
-        batch_size=1
-    )
+        args.config_file, args.data_file, args.weights, batch_size=1)
     # Darknet doesn't accept numpy images.
     # Create one with image we reuse for each detect
     width = darknet.network_width(network)
