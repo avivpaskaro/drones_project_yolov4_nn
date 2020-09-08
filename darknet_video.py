@@ -112,7 +112,7 @@ def video_capture(frame_queue, darknet_image_queue):
         if not ret:
             break
         # capture_time  
-        capture_time_queue.set(time.time())
+        capture_time_queue.put(time.time())
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame_resized = cv2.resize(frame_rgb, (width, height), interpolation=cv2.INTER_LINEAR)
         frame_queue.put(frame_resized)
@@ -142,6 +142,8 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
         index += 1
     f = open(logname, "w")
     """
+    fps_avg_counter = 0
+    fps_time = time.time()
     while cap.isOpened():
         # get new image from queue
         darknet_image = darknet_image_queue.get()
@@ -156,7 +158,11 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
          # store fps in queue
         fps_queue.put(int(fps))
          # printing fps to outstream (just to follow up)
-        print("FPS: {:.2f}".format(fps))
+        fps_avg_counter = fps_avg_counter + 1
+        if (time.time() - fps_time) > 3:  # 3 seconds
+            print("Average FPS over last 3 seconds is: {:.2f}".format(fps_avg_counter / 3.))
+            fps_time = time.time()
+            fps_avg_counter = 0
          # store capture time to file
         f.write("time: {}\n".format(capture_time_queue.get()))
          # store bbox to file
