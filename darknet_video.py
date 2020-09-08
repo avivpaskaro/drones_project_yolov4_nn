@@ -158,7 +158,7 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
          # printing fps to outstream (just to follow up)
         print("FPS: {:.2f}".format(fps))
          # store capture time to file
-        f.write("time: {}\n".format(capture_time_queue.get())
+        f.write("time: {}\n".format(capture_time_queue.get()))
          # store bbox to file
         height_ratio = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/height
         width_ratio = cap.get(cv2.CAP_PROP_FRAME_WIDTH)/width
@@ -242,6 +242,8 @@ if __name__ == '__main__':
     darknet_image = darknet.make_image(width, height, 3)
     input_path = str2int(args.input)
     cap = cv2.VideoCapture(input_path)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     Thread(target=video_capture, args=(frame_queue, darknet_image_queue)).start()
     Thread(target=inference, args=(darknet_image_queue, detections_queue, fps_queue)).start()
     Thread(target=drawing, args=(frame_queue, detections_queue, fps_queue)).start()
