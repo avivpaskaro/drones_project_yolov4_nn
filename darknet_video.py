@@ -25,7 +25,6 @@ def signal_handler(sig, frame):
     time.sleep(5)
     sys.exit(0)
 
-
  # CTRL+C
 signal.signal(signal.SIGINT, signal_handler)
 # stop on debugger
@@ -150,7 +149,7 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
     f = open(logname, "w")
     """
     enter_time_queue = [0, 0, 0]
-    exit_time_queue = [0, 0, 0]
+    exit_time_queue = [1, 1, 1]
     while cap.isOpened():
         # get new image from queue
         darknet_image = darknet_image_queue.get()
