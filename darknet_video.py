@@ -61,6 +61,10 @@ def parser():
                         help="path to data file")
     parser.add_argument("--thresh", type=float, default=.25,
                         help="remove detections with confidence below this value")
+    parser.add_argument("--capture_frame_width", default=1280,
+                        help="define the camera frame width")
+    parser.add_argument("--capture_frame_height", default=720,
+                        help="define the camera frame height")
     return parser.parse_args()
 
 
@@ -210,7 +214,8 @@ def drawing(frame_queue, detections_queue, fps_queue):
             # trying next index
             index += 1
     # result video obj
-    video = set_saved_video(cap, filename, (width, height))
+    video = set_saved_video(
+        cap, filename, (args.capture_frame_width, args.capture_frame_height))
     while cap.isOpened():
         frame_resized = frame_queue.get()
         detections = detections_queue.get()
@@ -219,6 +224,8 @@ def drawing(frame_queue, detections_queue, fps_queue):
             # draw detection bounding boxs on image
             image = darknet.draw_boxes(detections, frame_resized, class_colors)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.resize(image, (args.capture_frame_width,
+                                       args.capture_frame_height), interpolation=cv2.INTER_LINEAR)
             # writing video image
             if args.out_filename is not None:
                 video.write(image)
@@ -256,8 +263,8 @@ if __name__ == '__main__':
     darknet_image = darknet.make_image(width, height, 3)
     input_path = str2int(args.input)
     cap = cv2.VideoCapture(input_path)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.capture_frame_width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.capture_frame_height)
     Thread(target=video_capture, args=(
         frame_queue, darknet_image_queue)).start()
     Thread(target=inference, args=(darknet_image_queue,
