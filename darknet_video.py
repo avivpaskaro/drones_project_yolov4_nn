@@ -43,6 +43,8 @@ def parser():
     config_file - path to config file
     data_file - path to data file
     thresh - remove detections with confidence below this value
+    capture_frame_width - define the camera frame width
+    capture_frame_height - define the camera frame height
     """
     parser = argparse.ArgumentParser(description="YOLO Object Detection")
     parser.add_argument("--input", type=str, default=0,
