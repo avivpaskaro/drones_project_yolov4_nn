@@ -22,8 +22,7 @@ def signal_handler(sig, frame):
     cap.release()
     video.release()
     cv2.destroyAllWindows()
-    time.sleep(5)
-    sys.exit(0)
+	time.sleep(3)
 
 
  # CTRL+C
@@ -119,6 +118,9 @@ def video_capture(frame_queue, darknet_image_queue):
     reading frames from the caputre (webcam\video) and the time of caputre,
     and push them into queues for farther use.
     """
+	width_input = cap.get(cv2.CAP_PROP_FRAME_WIDTH) # float
+    height_input = cap.get(cv2.CAP_PROP_FRAME_HEIGHT) # float
+    print("Input resolution is: {}x{} (if 0x0, then the camera is occupied with something else)".format(int(width_input), int(height_input)))
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -139,9 +141,9 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
     inference the captures into the darknet.
     function is also in charge of the printing/writing (fps, caputre time, detections).
     """
-    logname = args.export_logname  # results log
-    f = open(logname, "w")
-    """ OPTION:
+	# results log
+    logname = args.export_logname 
+	""" OPTION: """
     # each time will open a new txt file
     logname_split = args.export_logname.rsplit(".", 1)
     index = 0
@@ -153,8 +155,8 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
             break
         # trying next index
         index += 1
+	""" OPTION: END """
     f = open(logname, "w")
-    """
     enter_time_queue = [0, 0, 0]
     exit_time_queue = [1, 1, 1]
     while cap.isOpened():
@@ -180,8 +182,8 @@ def inference(darknet_image_queue, detections_queue, fps_queue):
                     for m, n in zip(exit_time_queue, enter_time_queue)]
         print("Average FPS over last 3 frames is: {:.2f}".format(
             mean(fps_list)))
-        # store capture time to file
-        f.write("time: {}\n".format(capture_time_queue.get()))
+        # store capture time to file (in ms, for ground station)	
+		f.write("time: {}\n".format(str(round(capture_time_queue.get()*1000)))) 
         # store bbox to file
         height_ratio = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/height
         width_ratio = cap.get(cv2.CAP_PROP_FRAME_WIDTH)/width
