@@ -9,7 +9,7 @@
 --dont_show                               \
 --input          test2.mp4                \
 --export_logname results.txt              \
---out_filename out.mp4                    \
+--out_filename   out.mp4                  \
 > last_run_outstream.txt 2>&1 ; /bin/false) &
 
 # print spinner until procces ends
