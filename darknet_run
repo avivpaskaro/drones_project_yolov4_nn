@@ -1,2 +1,33 @@
 #!/bin/bash
-python3 -u darknet_video.py --data_file obj.data --config_file yolo608-obj.cfg --weights yolo608-obj_best.weights --thresh 0.25 --dont_show --input test2.mp4 --export_logname results.txt --out_filename out.mp4 > last_run_outstream.txt 2>&1
+
+# YOLO command line
+(python3 -u darknet_video.py              \ 
+--data_file      obj.data                 \
+--config_file    yolo608-obj.cfg          \
+--weights        yolo608-obj_best.weights \
+--thresh         0.25                     \
+--dont_show                               \
+--input          test2.mp4                \
+--export_logname results.txt              \
+--out_filename out.mp4                    \
+> last_run_outstream.txt 2>&1 ; /bin/false) &
+
+# print spinner until procces ends
+PID=$!
+i=1
+sp="/-\|"
+echo -n ' '
+while [ -d /proc/$PID ]
+do
+  printf "\b${sp:i++%${#sp}:1}"
+done
+
+# Collect the return code 
+wait ${pid}
+ret=$?
+if [ $ret -ne 0 ]; then
+    echo $'\nError'
+else
+    echo $'\nFinished'
+fi
+exit ${ret}
