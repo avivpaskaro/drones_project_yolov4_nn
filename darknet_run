@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # YOLO command line
-(python3 -u darknet_video.py --data_file obj.data --config_file yolo608-obj.cfg --weigh yolo608-obj_15000.weights --thresh 0.25 --dont_show --input test2.mp4 --export_logname results.txt --out_filename out.mp4 > last_run_outstream.txt 2>&1 ; /bin/false) &
+(python3 -u darknet_video.py --data_file obj.data --config_file yolo608-obj.cfg --weights yolo608-obj_15000.weights --thresh 0.25 --dont_show --input test2.mp4 --export_logname results.txt --out_filename out.mp4 > last_run_outstream.txt 2>&1 ; /bin/false) &
 
 # print spinner until procces ends
 PID=$!
